@@ -1,18 +1,18 @@
 import pyowm
-from pyowm import timeutils, exceptions
-from telegram import Message, Chat, Update, Bot
-from telegram.ext import run_async
-
-from tg_bot import dispatcher, updater, API_WEATHER
+from pyowm.commons.exceptions import NotFoundError
+from telegram import Update, ParseMode
+from telegram.ext import CommandHandler, CallbackContext
+from tg_bot import dispatcher, API_WEATHER, BAN_STICKER
 from tg_bot.modules.disable import DisableAbleCommandHandler
 
-@run_async
-def weather(bot, update, args):
-    if len(args) == 0:
+def weather(update: Update, context: CallbackContext):
+    if not context.args:
         update.effective_message.reply_text("Write a location to check the weather.")
         return
 
-    location = " ".join(args)
+    location = " ".join(context.args)
+    bot = context.bot
+
     if location.lower() == bot.first_name.lower():
         update.effective_message.reply_text("I will keep an eye on both happy and sad times!")
         bot.send_sticker(update.effective_chat.id, BAN_STICKER)
@@ -20,53 +20,50 @@ def weather(bot, update, args):
 
     try:
         owm = pyowm.OWM(API_WEATHER)
-        observation = owm.weather_at_place(location)
-        getloc = observation.get_location()
-        thelocation = getloc.get_name()
-        if thelocation == None:
-            thelocation = "Unknown"
-        theweather = observation.get_weather()
-        temperature = theweather.get_temperature(unit='celsius').get('temp')
-        if temperature == None:
-            temperature = "Unknown"
+        mgr = owm.weather_manager()
+        observation = mgr.weather_at_place(location)
+        weather = observation.weather
+        location_name = observation.location.name or "Unknown"
+        temperature = weather.temperature("celsius").get("temp", "Unknown")
 
-        # Weather symbols
-        status = ""
-        status_now = theweather.get_weather_code()
-        if status_now < 232: # Rain storm
-            status += "⛈️ "
-        elif status_now < 321: # Drizzle
-            status += "🌧️ "
-        elif status_now < 504: # Light rain
-            status += "🌦️ "
-        elif status_now < 531: # Cloudy rain
-             status += "⛈️ "
-        elif status_now < 622: # Snow
-            status += "🌨️ "
-        elif status_now < 781: # Atmosphere
-            status += "🌪️ "
-        elif status_now < 800: # Bright
-            status += "🌤️ "
-        elif status_now < 801: # A little cloudy
-             status += "⛅️ "
-        elif status_now < 804: # Cloudy
-             status += "☁️ "
-        status += theweather._detailed_status
-                        
+        code = weather.weather_code
+        # Map weather codes to emojis
+        if code < 232:
+            emoji = "⛈️"
+        elif code < 321:
+            emoji = "🌧️"
+        elif code < 504:
+            emoji = "🌦️"
+        elif code < 531:
+            emoji = "⛈️"
+        elif code < 622:
+            emoji = "🌨️"
+        elif code < 781:
+            emoji = "🌪️"
+        elif code == 800:
+            emoji = "🌤️"
+        elif code == 801:
+            emoji = "⛅️"
+        elif code <= 804:
+            emoji = "☁️"
+        else:
+            emoji = ""
 
-        update.message.reply_text("Today in {} is being {}, around {}°C.\n".format(thelocation,
-                status, temperature))
+        status = f"{emoji} {weather.detailed_status.capitalize()}"
 
-    except pyowm.exceptions.not_found_error.NotFoundError:
+        reply = f"Today in {location_name} is {status}, around {temperature}°C."
+        update.message.reply_text(reply)
+
+    except NotFoundError:
         update.effective_message.reply_text("Sorry, location not found.")
-
+    except Exception as e:
+        update.effective_message.reply_text(f"An error occurred: {e}")
 
 __help__ = """
- - /weather <city>: get weather info in a particular place
+ - /weather <city>: Get weather info for a particular place.
 """
 
 __mod_name__ = "Weather"
 
-WEATHER_HANDLER = DisableAbleCommandHandler("weather", weather, pass_args=True)
-
+WEATHER_HANDLER = DisableAbleCommandHandler("weather", weather)
 dispatcher.add_handler(WEATHER_HANDLER)
