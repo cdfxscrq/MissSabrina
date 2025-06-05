@@ -1,81 +1,80 @@
 {
   "name": "MissSabrina_Bot",
-  "description": "Sabrina",
+  "description": "A powerful Telegram group manager bot by TechnoAyanOfficial",
   "keywords": [
     "telegram",
-    "best",
-    "group",
-    "manager",
-    "3"
+    "bot",
+    "group-manager",
+    "miss-sabrina"
   ],
   "repository": "https://github.com/TechnoAyanOfficial/MissSabrina",
   "env": {
     "ENV": {
-      "description": "Setting this to ANYTHING will enable env variables",
-      "value": "ANYTHING"
+      "description": "Enable to use environment variables",
+      "value": "ENABLED"
     },
     "TOKEN": {
-      "description": "Your bot token, as a string.",
+      "description": "Telegram bot token from @BotFather",
       "value": ""
     },
     "OWNER_ID": {
-      "description": "An integer of consisting of your owner ID",
+      "description": "Numeric Telegram user ID of the bot owner",
       "value": "1111847352"
     },
     "OWNER_USERNAME": {
-      "description": "Your username",
+      "description": "Telegram username of the owner (without @)",
       "value": "TechnoAyanOfficial"
     },
     "MESSAGE_DUMP": {
-      "description": "optional: a chat where your replied saved messages are stored, to stop people deleting their old",
+      "description": "Chat ID where replied messages are stored (optional)",
       "value": "-1007777777777"
     },
     "SUDO_USERS": {
-      "description": "A space separated list of user_ids which should be considered sudo users",
+      "description": "Space-separated list of user IDs who are sudo users",
       "value": "1111847352"
     },
     "SUPPORT_USERS": {
-      "description": "A space separated list of user_ids which should be considered support users (can gban/ungban, nothing else)",
+      "description": "Space-separated list of support user IDs (gban/ungban access)",
       "value": "1111847352"
     },
     "WHITELIST_USERS": {
-      "description": "A space separated list of user_ids which should be considered whitelisted - they can't be banned.",
+      "description": "Space-separated user IDs who cannot be banned",
       "value": "1111847352"
     },
     "DONATION_LINK": {
-      "description": "Optional: link where you would like to receive donations.",
+      "description": "Link to your donation or support page",
       "value": "https://t.me/TechnoAyanOfficial"
     },
     "PORT": {
-      "description": "Port to use for your webhooks",
+      "description": "Webhook port",
       "value": "5000"
     },
     "DEL_CMDS": {
-      "description": "Whether to delete commands from users which don't have rights to use that command",
+      "description": "Delete commands from unauthorized users",
       "value": "False"
     },
     "STRICT_GBAN": {
-      "description": "Enforce gbans across new groups as well as old groups. When a gbanned user talks, he will be banned.",
+      "description": "Apply GBANs across all current and future groups",
       "value": "True"
     },
     "ALLOW_EXCL": {
-      "description": "Whether to allow using exclamation marks ! for commands as well as /.",
+      "description": "Allow commands to be triggered with '!' in addition to '/'",
       "value": "True"
     },
     "BAN_STICKER": {
-      "description": "Which sticker to use when banning people. Use https://telegram.dog/ShowJsonBot to get the file_id",
+      "description": "Sticker file_id to send when banning users",
       "value": "CAADBQADKwADttzjKMDa_NPYQVImFgQ"
     },
     "API_OPENWEATHER": {
-    "description": "Isi api openweather",
-    "value": "leave it"
+      "description": "OpenWeatherMap API key (optional)",
+      "value": "leave it"
     }
   },
   "addons": [
     {
       "plan": "heroku-postgresql",
       "options": {
-        "version": "9.5"
+        "version": "15"
       }
     }
   ]
