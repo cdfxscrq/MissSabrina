@@ -1,42 +1,48 @@
 from typing import List
-
-from telegram import Bot, Update
-from telegram.ext import run_async
-
+from telegram import Update
+from telegram.ext import ContextTypes, CommandHandler
 from tg_bot import dispatcher
 from tg_bot.modules.disable import DisableAbleCommandHandler
 
-normiefont = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u',
-              'v', 'w', 'x', 'y', 'z']
-weebyfont = ['🅐', '🅑', '🅒', '🅓', '🅔', '🅕', '🅖', '🅗', '🅘', '🅙', '🅚', '🅛', '🅜', '🅝', '🅞', '🅟', '🅠', '🅡', '🅢', '🅣', '🅤',
-              '🅥', '🅦', '🅧', '🅨', '🅩']
+normiefont = list("abcdefghijklmnopqrstuvwxyz")
+weebyfont = ['🅐', '🅑', '🅒', '🅓', '🅔', '🅕', '🅖', '🅗', '🅘', '🅙', '🅚', '🅛', '🅜',
+             '🅝', '🅞', '🅟', '🅠', '🅡', '🅢', '🅣', '🅤', '🅥', '🅦', '🅧', '🅨', '🅩']
 
+def blackout_text(input_text: str) -> str:
+    transformed = ''
+    for char in input_text.lower():
+        if char in normiefont:
+            index = normiefont.index(char)
+            transformed += weebyfont[index]
+        else:
+            transformed += char
+    return transformed
 
-@run_async
-def weebify(bot: Bot, update: Update, args: List[str]):
-    string = '  '.join(args).lower()
-    for normiecharacter in string:
-        if normiecharacter in normiefont:
-            weebycharacter = weebyfont[normiefont.index(normiecharacter)]
-            string = string.replace(normiecharacter, weebycharacter)
-
+async def weebify(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.effective_message
-    if message.reply_to_message:
-        message.reply_to_message.reply_text(string)
-    else:
-        message.reply_text(string)
 
+    if context.args:
+        input_text = ' '.join(context.args)
+    elif message.reply_to_message and message.reply_to_message.text:
+        input_text = message.reply_to_message.text
+    else:
+        await message.reply_text("❗ Provide some text or reply to a message to blackout.")
+        return
+
+    result = blackout_text(input_text)
+
+    if message.reply_to_message:
+        await message.reply_to_message.reply_text(result)
+    else:
+        await message.reply_text(result)
 
 __help__ = """
- Originally Made By [Ayan Ansari](t.me/TechnoAyanOfficial)
- 
- - /blackout <text>: Apply Blackout Style to your text
- """
+🖤 /blackout <text> — Transforms your text into blackout (🅐🅑🅒...) style.
 
-WEEBIFY_HANDLER = DisableAbleCommandHandler("blackout", weebify, pass_args=True)
-
-dispatcher.add_handler(WEEBIFY_HANDLER)
+You can also reply to any message with /blackout to transform it.
+"""
 
 __mod_name__ = "Black Out"
-command_list = ["weebify"]
-handlers = [WEEBIFY_HANDLER]
+
+blackout_handler = DisableAbleCommandHandler("blackout", weebify)
+dispatcher.add_handler(blackout_handler)
