@@ -1,44 +1,57 @@
+import sys
+
+# Prevent using sample_config.py directly
 if not __name__.endswith("sample_config"):
-    import sys
-    print("The README is there to be read. Extend this sample config to a config file, don't just rename and change "
-          "values here. Doing that WILL backfire on you.\nBot quitting.", file=sys.stderr)
-    quit(1)
+    print(
+        "❌ You're running the sample config directly!\n"
+        "Please create a new 'config.py' file by extending this file.\n"
+        "Don't just rename and change values here — it will backfire.\n"
+        "Bot quitting.",
+        file=sys.stderr
+    )
+    sys.exit(1)
 
-
-# Create a new config.py file in same dir and import, then extend this class.
+# ─────────────────────────────────────────────────────────
+# Base Configuration Class - Extend this in your config.py
+# ─────────────────────────────────────────────────────────
 class Config(object):
-    LOGGER = True
+    LOGGER = True  # Enable or disable logging
 
     # REQUIRED
-    API_KEY = ""
-    OWNER_ID = "594813047" # If you dont know, run @MissRose_bot and do /id in pm
-    OWNER_USERNAME = "refundisillegal"
+    API_KEY = ""  # Your bot token from @BotFather
+    OWNER_ID = "594813047"  # Run /id in PM to @MissRose_bot to get your user ID
+    OWNER_USERNAME = "refundisillegal"  # Owner's Telegram username (without @)
 
     # RECOMMENDED
-    SQLALCHEMY_DATABASE_URI = 'sqldbtype://username:pw@hostname:port/db_name'  # needed for any database modules
-    MESSAGE_DUMP = None  # needed to make sure 'save from' messages persist
-    LOAD = []
-    NO_LOAD = ['translation', 'rss']
-    WEBHOOK = False
-    URL = None
+    SQLALCHEMY_DATABASE_URI = 'postgresql://username:password@hostname:port/db_name'
+    MESSAGE_DUMP = None  # Optional: Chat ID to store replied messages
+    LOAD = []  # Modules to load explicitly
+    NO_LOAD = ['translation', 'rss']  # Modules to skip loading
+    WEBHOOK = False  # Use webhook or polling
+    URL = None  # Webhook URL (if any)
 
-    # OPTIONAL
-    SUDO_USERS = []  # List of id's (not usernames) for users which have sudo access to the bot.
-    SUPPORT_USERS = []  # List of id's (not usernames) for users which are allowed to gban, but can also be banned.
-    WHITELIST_USERS = []  # List of id's (not usernames) for users which WONT be banned/kicked by the bot.
-    DONATION_LINK = None  # EG, paypal
-    CERT_PATH = None
-    PORT = 5000
-    DEL_CMDS = False  # Whether or not you should delete "blue text must click" commands
-    STRICT_GBAN = False
-    WORKERS = 8  # Number of subthreads to use. This is the recommended amount - see for yourself what works best!
-    BAN_STICKER = 'CAADAgADOwADPPEcAXkko5EB3YGYAg'  # banhammer marie sticker
-    KICK_STICKER = False # StickerId while /kick ,same as BAN_STICKER
-    ALLOW_EXCL = False  # Allow ! commands as well as /
-    API_OPENWEATHER = False #Get API_OPENWEATHER FROM OFFICAL SITE https://da.gd/VAW3
-    TEMPORARY_DATA = None # Temporary data for backup module, use int number
+    # OPTIONAL ACCESS LISTS
+    SUDO_USERS = []  # List of user IDs with sudo privileges
+    SUPPORT_USERS = []  # List of user IDs with limited mod access (can gban, but can be banned)
+    WHITELIST_USERS = []  # List of user IDs immune to bans/kicks
+
+    # OPTIONAL CONFIG
+    DONATION_LINK = None  # e.g., PayPal, BuyMeACoffee
+    CERT_PATH = None  # Path to SSL certificate (for webhooks)
+    PORT = 5000  # Port for webhooks
+    DEL_CMDS = False  # Delete "blue text" command messages
+    STRICT_GBAN = False  # Enforce gbans in all groups, including new ones
+    WORKERS = 8  # Number of subthreads to use
+    BAN_STICKER = 'CAADAgADOwADPPEcAXkko5EB3YGYAg'  # Sticker file_id used on ban
+    KICK_STICKER = False  # Optional: Sticker to use on kick
+    ALLOW_EXCL = False  # Allow ! commands in addition to /
+    API_OPENWEATHER = False  # Your OpenWeatherMap API key (optional)
+    TEMPORARY_DATA = None  # For backup/restore purposes, e.g., session temp storage
 
 
+# ───────────────────────────────
+# Deployment-specific extensions
+# ───────────────────────────────
 class Production(Config):
     LOGGER = False
 
