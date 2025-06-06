@@ -1,10 +1,10 @@
 import html
 from typing import Optional, List
 
-from telegram import Message, Chat, Update, Bot, User, ParseMode
+from telegram import Message, Chat, Update, Bot, User
 from telegram.error import BadRequest, Unauthorized
-from telegram.ext import CommandHandler, RegexHandler, run_async, Filters
-from telegram.utils.helpers import mention_html
+from telegram.ext import CommandHandler, MessageHandler, Filters
+from telegram.helpers import mention_html
 
 from tg_bot import dispatcher, LOGGER
 from tg_bot.modules.helper_funcs.chat_status import user_not_admin, user_admin
@@ -13,112 +13,103 @@ from tg_bot.modules.sql import reporting_sql as sql
 
 REPORT_GROUP = 5
 
-
-@run_async
 @user_admin
-def report_setting(bot: Bot, update: Update, args: List[str]):
-    chat = update.effective_chat  # type: Optional[Chat]
-    msg = update.effective_message  # type: Optional[Message]
+def report_setting(update: Update, context):
+    chat: Optional[Chat] = update.effective_chat
+    msg: Optional[Message] = update.effective_message
+    args: List[str] = context.args if context.args else []
 
     if chat.type == chat.PRIVATE:
-        if len(args) >= 1:
-            if args[0] in ("yes", "on"):
+        if args:
+            if args[0].lower() in ("yes", "on"):
                 sql.set_user_setting(chat.id, True)
                 msg.reply_text("Turned on reporting! You'll be notified whenever anyone reports something.")
-
-            elif args[0] in ("no", "off"):
+            elif args[0].lower() in ("no", "off"):
                 sql.set_user_setting(chat.id, False)
-                msg.reply_text("Turned off reporting! You wont get any reports.")
+                msg.reply_text("Turned off reporting! You won't get any reports.")
         else:
-            msg.reply_text("Your current report preference is: `{}`".format(sql.user_should_report(chat.id)),
-                           parse_mode=ParseMode.MARKDOWN)
-
+            current = sql.user_should_report(chat.id)
+            msg.reply_text(
+                f"Your current report preference is: `{current}`",
+                parse_mode="Markdown"
+            )
     else:
-        if len(args) >= 1:
-            if args[0] in ("yes", "on"):
+        if args:
+            if args[0].lower() in ("yes", "on"):
                 sql.set_chat_setting(chat.id, True)
-                msg.reply_text("Turned on reporting! Admins who have turned on reports will be notified when /report "
-                               "or @admin are called.")
-
-            elif args[0] in ("no", "off"):
+                msg.reply_text(
+                    "Turned on reporting! Admins who have turned on reports will be notified when /report or @admin are called."
+                )
+            elif args[0].lower() in ("no", "off"):
                 sql.set_chat_setting(chat.id, False)
-                msg.reply_text("Turned off reporting! No admins will be notified on /report or @admin.")
+                msg.reply_text(
+                    "Turned off reporting! No admins will be notified on /report or @admin."
+                )
         else:
-            msg.reply_text("This chat's current setting is: `{}`".format(sql.chat_should_report(chat.id)),
-                           parse_mode=ParseMode.MARKDOWN)
+            current = sql.chat_should_report(chat.id)
+            msg.reply_text(
+                f"This chat's current setting is: `{current}`",
+                parse_mode="Markdown"
+            )
 
-
-@run_async
 @user_not_admin
 @loggable
-def report(bot: Bot, update: Update) -> str:
-    message = update.effective_message  # type: Optional[Message]
-    chat = update.effective_chat  # type: Optional[Chat]
-    user = update.effective_user  # type: Optional[User]
+def report(update: Update, context) -> str:
+    message: Optional[Message] = update.effective_message
+    chat: Optional[Chat] = update.effective_chat
+    user: Optional[User] = update.effective_user
 
     if chat and message.reply_to_message and sql.chat_should_report(chat.id):
-        reported_user = message.reply_to_message.from_user  # type: Optional[User]
-        chat_name = chat.title or chat.first or chat.username
+        reported_user: Optional[User] = message.reply_to_message.from_user
+        chat_name = chat.title or chat.first_name or chat.username
         admin_list = chat.get_administrators()
 
         if chat.username and chat.type == Chat.SUPERGROUP:
-            msg = "<b>{}:</b>" \
-                  "\n<b>Reported user:</b> {} (<code>{}</code>)" \
-                  "\n<b>Reported by:</b> {} (<code>{}</code>)".format(html.escape(chat.title),
-                                                                      mention_html(
-                                                                          reported_user.id,
-                                                                          reported_user.first_name),
-                                                                      reported_user.id,
-                                                                      mention_html(user.id,
-                                                                                   user.first_name),
-                                                                      user.id)
-            link = "\n<b>Link:</b> " \
-                   "<a href=\"http://telegram.me/{}/{}\">click here</a>".format(chat.username, message.message_id)
-
+            msg = (
+                f"<b>{html.escape(chat.title)}:</b>"
+                f"\n<b>Reported user:</b> {mention_html(reported_user.id, reported_user.first_name)} (<code>{reported_user.id}</code>)"
+                f"\n<b>Reported by:</b> {mention_html(user.id, user.first_name)} (<code>{user.id}</code>)"
+            )
+            link = (
+                f"\n<b>Link:</b> "
+                f'<a href="http://t.me/{chat.username}/{message.message_id}">click here</a>'
+            )
             should_forward = False
-
         else:
-            msg = "{} is calling for admins in \"{}\"!".format(mention_html(user.id, user.first_name),
-                                                               html.escape(chat_name))
+            msg = (
+                f'{mention_html(user.id, user.first_name)} is calling for admins in "{html.escape(chat_name)}"!'
+            )
             link = ""
             should_forward = True
 
         for admin in admin_list:
-            if admin.user.is_bot:  # can't message bots
+            if admin.user.is_bot:
                 continue
-
             if sql.user_should_report(admin.user.id):
                 try:
-                    bot.send_message(admin.user.id, msg + link, parse_mode=ParseMode.HTML)
-
+                    context.bot.send_message(admin.user.id, msg + link, parse_mode="HTML")
                     if should_forward:
                         message.reply_to_message.forward(admin.user.id)
-
-                        if len(message.text.split()) > 1:  # If user is giving a reason, send his message too
+                        if message.text and len(message.text.split()) > 1:
                             message.forward(admin.user.id)
-
                 except Unauthorized:
-                    pass
-                except BadRequest as excp:  # TODO: cleanup exceptions
+                    continue
+                except BadRequest:
                     LOGGER.exception("Exception while reporting user")
         return msg
-
     return ""
-
 
 def __migrate__(old_chat_id, new_chat_id):
     sql.migrate_chat(old_chat_id, new_chat_id)
 
-
 def __chat_settings__(chat_id, user_id):
-    return "This chat is setup to send user reports to admins, via /report and @admin: `{}`".format(
-        sql.chat_should_report(chat_id))
-
+    return f"This chat is setup to send user reports to admins, via /report and @admin: `{sql.chat_should_report(chat_id)}`"
 
 def __user_settings__(user_id):
-    return "You receive reports from chats you're admin in: `{}`.\nToggle this with /reports in PM.".format(
-        sql.user_should_report(user_id))
-
+    return (
+        f"You receive reports from chats you're admin in: `{sql.user_should_report(user_id)}`.\n"
+        "Toggle this with /reports in PM."
+    )
 
 __mod_name__ = "Reporting"
 
@@ -135,7 +126,7 @@ NOTE: neither of these will get triggered if used by admins
 
 REPORT_HANDLER = CommandHandler("report", report, filters=Filters.group)
 SETTING_HANDLER = CommandHandler("reports", report_setting, pass_args=True)
-ADMIN_REPORT_HANDLER = RegexHandler("(?i)@admin(s)?", report)
+ADMIN_REPORT_HANDLER = MessageHandler(Filters.regex(r"(?i)@admin(s)?"), report)
 
 dispatcher.add_handler(REPORT_HANDLER, REPORT_GROUP)
 dispatcher.add_handler(ADMIN_REPORT_HANDLER, REPORT_GROUP)
